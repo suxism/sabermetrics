@@ -1,5 +1,7 @@
-
+# -*- coding: utf-8 -*-
+"""
 @author: Ji-Hoon Park
+"""
 
 import pandas as pd
 import numpy as np
