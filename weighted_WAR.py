@@ -10,6 +10,8 @@ import statsmodels.api as sm
 
 data = pd.read_csv(r'C:\Users\USER\Downloads\Fangraphs Leaderboard (2).csv').set_index('playerid')
 coeff = pd.DataFrame(index=range(1920, 2018), columns=['x1','x2','x3'])
+rmse = pd.Series(index=range(1920, 2018))
+corr = pd.Series(index=range(1920, 2018))
 
 data = data[data.PA >= 10]
 data['WAR/PA'] = data.WAR/data.PA
@@ -29,4 +31,9 @@ for year in range(1923, 2018):
     coeff['x1'].loc[year] = model.params[0]
     coeff['x2'].loc[year] = model.params[1]
     coeff['x3'].loc[year] = model.params[2]
+    
+    y_ = (x1*coeff['x1'].loc[year] + x2*coeff['x2'].loc[year] + x3*coeff['x3'].loc[year])
+    
+    corr.loc[year] = y.corr(y_)
+    rmse.loc[year] = (((y - y_)**2).mean())**0.5
 
