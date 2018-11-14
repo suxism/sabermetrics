@@ -29,12 +29,15 @@ for player in data.index:
         elif data.loc[player].team == 'sangyang':
             data[opp_stat].loc[player] = team_data.loc['booksan',:][stat].sum()      
 
+data['Tm TS%'] = data['Tm PTS'] / (2 * (data['Tm FGA'] + 0.44 * data['Tm FTA']))
 
 #%% efficiency
 
-data['AST%'] = 100 * data.AST/((data.MP/(data['Tm MP']/5)) * data['Tm FG']) - data.FG
+data['TS%'] = data['PTS'] / (2 * (data['FGA'] + 0.44 * data['FTA']))
+data['AST%'] = 100 * data.AST/(((data.MP/(data['Tm MP']/5)) * data['Tm FG']) - data.FG)
 data['BLK%'] = 100 * (data.BLK * (data['Tm MP']/5))/(data.MP * (data['Opp FGA'] - data['Opp 3PA']))
 data['DRB%'] = 100 * (data.DRB * (data['Tm MP']/5)) / (data.MP * (data['Tm DRB'] + data['Opp ORB']))
+data['TRB%'] = 100 * ((data.DRB + data.ORB) * (data['Tm MP'] / 5)) / (data['MP'] * (data['Tm DRB'] + data['Tm ORB'] + data['Opp DRB'] + data['Opp ORB']))
 data['eFG%'] = (data.FG + 0.5 * data['3P'])/data.FGA
 data['FG%'] = data.FG / data.FGA
 data['FT%'] = data.FT / data.FTA
@@ -42,7 +45,6 @@ data['GmSc'] = (11./65)*10. * (data.PTS + 0.4 * data.FG - 0.7 * data.FGA - 0.4*(
 data['ORB%'] = 100 * (data.ORB * (data['Tm MP']/5)) / (data.MP * (data['Tm ORB'] + data['Opp DRB']))
 data['TOV%'] = 100 * data.TOV / (data.FGA + 0.44 * data.FTA + data.TOV)
 data['Usg%'] = 100 * ((data.FGA + 0.44 * data.FTA + data.TOV) * (data['Tm MP'] / 5)) / (data.MP * (data['Tm FGA'] + 0.44 * data['Tm FTA'] + data['Tm TOV']))
-
 
 #%% Possesions
 
@@ -53,6 +55,7 @@ lg_Pace = data.groupby('team').Pace.first().mean()
 
 data['Poss adj'] = lg_Pace / data['Pace']
 
+data['STL%'] = 100 * (data['STL'] * (data['Tm MP'] / 5)) / (data['MP'] * data['Opp Poss'])
 
 #%% PER
 
@@ -74,3 +77,44 @@ data['aPER'] = data['Poss adj'] * data['uPER']
 data['PER'] = data['aPER'] * (15 / lg_uPER)
 
 print(data['PER'].sort_values(ascending=False))
+
+#%% BPM
+
+a = 0.123391
+b = 0.119597
+c = -0.151287
+d = 1.255644
+e = 0.531838
+f = -0.305868
+g = 0.921292
+h = 0.711217
+i = 0.017022
+j = 0.297639
+k = 0.213485
+l = 0.725930
+
+data['MPG'] = data['MP']/(1)
+data['ReMPG'] = data['MP']/(5)
+data['3PAr'] = data['3PA']/data['FGA']
+Lg3PAr = data['3PA'].sum()/data['FGA'].sum()
+
+data['Raw BPM'] = a*data['ReMPG'] + b*data['ORB%'] + c*data['DRB%'] + d*data['STL%'] + e*data['BLK%'] + f*data['AST%'] - g*data['Usg%']*data['TOV%'] + \
+h*data['Usg%']*(1-data['TOV%'])*(2*(data['TS%'] - data['Tm TS%']) + i*data['AST%'] + j*(data['3PAr'] - Lg3PAr) - k) + l*np.sqrt(data['AST%']*data['TRB%'])
+
+print(data['Raw BPM'].sort_values(ascending=False))
+
+#%% ASPM
+
+a = 0.08033
+b = 0.16984
+c = 0.27982
+d = 1.26329
+e = 0.66443
+f = 0.53342
+g = 1.47832
+h = 0.00794
+i = 0.01160
+
+data['ASPM'] = a*data['MPG'] + b*data['TRB%'] + c*data['BLK%'] + d*data['STL%'] + e*data['Usg%']*( data['TS%']*2*(1-data['TOV%']) - f*data['TOV%'] - g + h*data['AST%'] + i*data['Usg%'] )
+
+print(data['ASPM'].sort_values(ascending=False))
