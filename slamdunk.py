@@ -6,33 +6,43 @@
 import pandas as pd
 import numpy as np
 
-data = pd.read_csv(r'C:\Users\USER\Downloads\stats.csv').set_index(['player']).replace(np.nan,0)
+data = pd.read_csv(r'C:\Users\USER\Downloads\stats.csv').replace(np.nan,0)
 
 #%% team stats
 
 data['MP'] = data['Min_1ST'] + data['Min_2nd']
 data['PTS'] = data['FG']*2 + data['FT']*1 + data['3P']*1
-team_data = data.groupby(['team','game']).sum()
+team_data = data.groupby(['team','game']).sum().reset_index()
 
-for stat in data.columns[3:20]:
+for stat in data.columns[4:21]:
     data['Tm ' + stat] = pd.Series(index=data.index)
     data['Opp ' + stat] = pd.Series(index=data.index)
 
-for player in data.index:
-    for stat in data.columns[3:20]:
+for i in data.index:    
+    p = data.loc[i].player
+    t = data.loc[i].team
+    g = data.loc[i].game   
+    for stat in data.columns[4:21]:
         tm_stat = 'Tm ' + stat
-        opp_stat = 'Opp ' + stat
-        data[tm_stat].loc[player] = team_data.loc[data.loc[player].team,:][stat].sum()
-        
-        if data.loc[player].team == 'booksan':
-            data[opp_stat].loc[player] = team_data.loc['sangyang',:][stat].sum()
-        elif data.loc[player].team == 'sangyang':
-            data[opp_stat].loc[player] = team_data.loc['booksan',:][stat].sum()      
+        data[tm_stat].loc[i] = team_data[team_data.team==t][team_data.game==g][stat].sum()
 
-data['Tm TS%'] = data['Tm PTS'] / (2 * (data['Tm FGA'] + 0.44 * data['Tm FTA']))
+for i in data.index:    
+    p = data.loc[i].player
+    t = data.loc[i].team
+    g = data.loc[i].game   
+    for stat in data.columns[4:21]:
+        opp_stat = 'Opp ' + stat
+        data[opp_stat].loc[i] = team_data[team_data.team!=t][team_data.game==g][stat].sum()
+
+data.to_csv(r'C:\Users\USER\Downloads\data_raw.csv', index=False)
 
 #%% efficiency
 
+data = pd.read_csv(r'C:\Users\USER\Downloads\data_raw.csv')
+data['G'] = 1
+data = data.groupby('player').sum()
+
+data['Tm TS%'] = data['Tm PTS'] / (2 * (data['Tm FGA'] + 0.44 * data['Tm FTA']))
 data['TS%'] = data['PTS'] / (2 * (data['FGA'] + 0.44 * data['FTA']))
 data['AST%'] = 100 * data.AST/(((data.MP/(data['Tm MP']/5)) * data['Tm FG']) - data.FG)
 data['BLK%'] = 100 * (data.BLK * (data['Tm MP']/5))/(data.MP * (data['Opp FGA'] - data['Opp 3PA']))
@@ -41,44 +51,61 @@ data['TRB%'] = 100 * ((data.DRB + data.ORB) * (data['Tm MP'] / 5)) / (data['MP']
 data['eFG%'] = (data.FG + 0.5 * data['3P'])/data.FGA
 data['FG%'] = data.FG / data.FGA
 data['FT%'] = data.FT / data.FTA
-data['GmSc'] = (11./65)*10. * (data.PTS + 0.4 * data.FG - 0.7 * data.FGA - 0.4*(data.FTA - data.FT) + 0.7 * data.ORB + 0.3 * data.DRB + data.STL + 0.7 * data.AST + 0.7 * data.BLK - 0.4 * data.PF - data.TOV)
+data['GmSc'] = data.PTS + 0.4 * data.FG - 0.7 * data.FGA - 0.4*(data.FTA - data.FT) + 0.7 * data.ORB + 0.3 * data.DRB + data.STL + 0.7 * data.AST + 0.7 * data.BLK - 0.4 * data.PF - data.TOV
 data['ORB%'] = 100 * (data.ORB * (data['Tm MP']/5)) / (data.MP * (data['Tm ORB'] + data['Opp DRB']))
 data['TOV%'] = 100 * data.TOV / (data.FGA + 0.44 * data.FTA + data.TOV)
 data['Usg%'] = 100 * ((data.FGA + 0.44 * data.FTA + data.TOV) * (data['Tm MP'] / 5)) / (data.MP * (data['Tm FGA'] + 0.44 * data['Tm FTA'] + data['Tm TOV']))
+data['GmSc/G'] = data['GmSc']/data['G']
 
 #%% Possesions
 
-data['Tm Poss'] = data['Tm FGA'] + 0.4 * data['Tm FTA'] - 1.07 * (data['Tm ORB']/(data['Tm ORB'] + data['Opp DRB'])) * (data['Tm FGA'] - data['Tm FG']) + data['Tm TOV']
-data['Opp Poss'] = data['Opp FGA'] + 0.4 * data['Opp FTA'] - 1.07 * (data['Opp ORB']/(data['Opp ORB'] + data['Tm DRB'])) * (data['Opp FGA'] - data['Opp FG']) + data['Opp TOV']
-data['Pace'] = 48 * ((data['Tm Poss'] + data['Opp Poss']) / (2 * (data['Tm MP'] / 5)))
-lg_Pace = data.groupby('team').Pace.first().mean()
+data = pd.read_csv(r'C:\Users\USER\Downloads\data_raw.csv')
+lg_data = data.groupby(['team','game']).first().drop(columns=['player']).sum().drop(index=['Pos','AST','STL','DRB','ORB','BLK','TOV','PF','FGA','FG','3PA','3P','FTA','FT','Min_1ST','Min_2nd','MP','PTS'])
 
-data['Poss adj'] = lg_Pace / data['Pace']
+data['Tm Poss'] = (- 1.07 * (data['Tm ORB']/(data['Tm ORB'] + data['Opp DRB'])) * (data['Tm FGA'] - data['Tm FG']) + data['Tm TOV']).replace(np.nan,0)
+data['Tm Poss'] = data['Tm FGA'] + 0.4 * data['Tm FTA'] + data['Tm Poss']
+data['Opp Poss'] = (- 1.07 * (data['Opp ORB']/(data['Opp ORB'] + data['Tm DRB'])) * (data['Opp FGA'] - data['Opp FG']) + data['Opp TOV']).replace(np.nan,0)
+data['Opp Poss'] = data['Opp FGA'] + 0.4 * data['Opp FTA'] + data['Opp Poss'] 
+data['Pace'] = 40 * ((data['Tm Poss'] + data['Opp Poss']) / (2 * (data['Tm MP'] / 5)))
+lg_Pace = 40*(data.groupby(['team','game']).first()['Tm Poss'].sum() + data.groupby(['team','game']).first()['Opp Poss'].sum())/ (2 * (data.groupby(['team','game']).first()['Tm MP'].sum()/ 5))
 
+data = data.groupby('player').sum()
+data['Tm Poss'] = (- 1.07 * (data['Tm ORB']/(data['Tm ORB'] + data['Opp DRB'])) * (data['Tm FGA'] - data['Tm FG']) + data['Tm TOV']).replace(np.nan,0)
+data['Tm Poss'] = data['Tm FGA'] + 0.4 * data['Tm FTA'] + data['Tm Poss']
+data['Opp Poss'] = (- 1.07 * (data['Opp ORB']/(data['Opp ORB'] + data['Tm DRB'])) * (data['Opp FGA'] - data['Opp FG']) + data['Opp TOV']).replace(np.nan,0)
+data['Opp Poss'] = data['Opp FGA'] + 0.4 * data['Opp FTA'] + data['Opp Poss'] 
+data['Pace'] = 40 * ((data['Tm Poss'] + data['Opp Poss']) / (2 * (data['Tm MP'] / 5)))
+
+#data['Poss adj'] = lg_Pace / data['Pace']
+data['Poss adj'] = 0.5 + 0.5*(lg_Pace / data['Pace'])
+#data['Poss adj'] = 1
 data['STL%'] = 100 * (data['STL'] * (data['Tm MP'] / 5)) / (data['MP'] * data['Opp Poss'])
 
 #%% PER
 
-lg_data = team_data.sum()
+factor = (2./3) - (0.5 * (lg_data['Tm AST'] / lg_data['Tm FG'])) / (2 * (lg_data['Tm FG'] / lg_data['Tm FT']))
+VOP = lg_data['Tm PTS'] / (lg_data['Tm FGA'] - lg_data['Tm ORB'] + lg_data['Tm TOV'] + 0.44 * lg_data['Tm FTA'])
+DRBr = lg_data['Tm DRB'] / (lg_data['Tm DRB'] + lg_data['Tm ORB'])
 
-factor = (2. / 3) - (0.5 * (lg_data.AST / lg_data.FG)) / (2 * (lg_data.FG / lg_data.FT))
-VOP = lg_data.PTS / (lg_data.FGA - lg_data.ORB + lg_data.TOV + 0.44 * lg_data.FTA)
-DRBr = lg_data.DRB / (lg_data.DRB + lg_data.ORB)
-
-data['uPER'] = (1 / data.MP) * ( data['3P'] + (2./3) * data.AST + (2 - factor * (data['Tm AST']/ data['Tm FG'])) * data.FG + (data.FT *0.5 * (1 + (1 - (data['Tm AST'] / data['Tm FG'])) + (2./3) * (data['Tm AST']/data['Tm FG']))) \
+data['uPER'] = (1./data.MP) * ( data['3P'] + (2./3) * data.AST + (2 - factor * (data['Tm AST']/ data['Tm FG'])) * data.FG + (data.FT *0.5 * (1 + (1 - (data['Tm AST'] / data['Tm FG'])) + (2./3) * (data['Tm AST']/data['Tm FG']))) \
      - VOP * data.TOV - VOP * DRBr * (data.FGA - data.FG) - VOP * 0.44 * (0.44 + (0.56 * DRBr)) * (data.FTA - data.FT) + VOP * (1 - DRBr) * (data.DRB) + VOP * DRBr * data.ORB + VOP * data.STL \
-     + VOP * DRBr * data.BLK - data.PF * ((lg_data.FT/lg_data.PF) - 0.44 * (lg_data.FTA / lg_data.PF) * VOP))
+     + VOP * DRBr * data.BLK - data.PF * ((lg_data['Tm FT']/lg_data['Tm PF']) - 0.44 * (lg_data['Tm FTA'] / lg_data['Tm PF']) * VOP))
 
-lg_uPER = (1 / lg_data.MP) * ( lg_data['3P'] + (2./3) * lg_data.AST + (2 - factor * (lg_data['AST']/ lg_data['FG'])) * lg_data.FG + (lg_data.FT *0.5 * (1 + (1 - (lg_data['AST'] / lg_data['FG'])) + (2./3) * (lg_data['AST']/lg_data['FG']))) \
-     - VOP * lg_data.TOV - VOP * DRBr * (lg_data.FGA - lg_data.FG) - VOP * 0.44 * (0.44 + (0.56 * DRBr)) * (lg_data.FTA - lg_data.FT) + VOP * (1 - DRBr) * (lg_data.DRB) + VOP * DRBr * lg_data.ORB + VOP * lg_data.STL \
-     + VOP * DRBr * lg_data.BLK - lg_data.PF * ((lg_data.FT/lg_data.PF) - 0.44 * (lg_data.FTA / lg_data.PF) * VOP))
+lg_uPER = (1./lg_data['Tm MP']) * ( lg_data['Tm 3P'] + (2./3) * lg_data['Tm AST'] + (2 - factor * (lg_data['Tm AST']/ lg_data['Tm FG'])) * lg_data['Tm FG'] + (lg_data['Tm FT'] *0.5 * (1 + (1 - (lg_data['Tm AST'] / lg_data['Tm FG'])) + (2./3) * (lg_data['Tm AST']/lg_data['Tm FG']))) \
+     - VOP * lg_data['Tm TOV'] - VOP * DRBr * (lg_data['Tm FGA'] - lg_data['Tm FG']) - VOP * 0.44 * (0.44 + (0.56 * DRBr)) * (lg_data['Tm FTA'] - lg_data['Tm FT']) + VOP * (1 - DRBr) * (lg_data['Tm DRB']) + VOP * DRBr * lg_data['Tm ORB'] + VOP * lg_data['Tm STL'] \
+     + VOP * DRBr * lg_data['Tm BLK'] - lg_data['Tm PF'] * ((lg_data['Tm FT']/lg_data['Tm PF']) - 0.44 * (lg_data['Tm FTA'] / lg_data['Tm PF']) * VOP))
 
 data['aPER'] = data['Poss adj'] * data['uPER']
-data['PER'] = data['aPER'] * (15 / lg_uPER)
+lg_aPER = (data['aPER']*data['MP']).replace(np.nan,0).sum()/data['MP'].sum()
+data['PER'] = data['aPER'] * (15./ lg_aPER)
 
-print(data['PER'].sort_values(ascending=False))
+print(data[data.MP>10]['PER'].sort_values(ascending=False))
 
 #%% BPM
+
+data = pd.read_csv(r'C:\Users\USER\Downloads\data_raw.csv')
+data['G'] = 1
+data = data.groupby('player').sum()
 
 a = 0.123391
 b = 0.119597
@@ -93,7 +120,7 @@ j = 0.297639
 k = 0.213485
 l = 0.725930
 
-data['MPG'] = data['MP']/(1)
+data['MPG'] = data['MP']/data['G']
 data['ReMPG'] = data['MP']/(5)
 data['3PAr'] = data['3PA']/data['FGA']
 Lg3PAr = data['3PA'].sum()/data['FGA'].sum()
@@ -115,6 +142,6 @@ g = 1.47832
 h = 0.00794
 i = 0.01160
 
-data['ASPM'] = a*data['MPG'] + b*data['TRB%'] + c*data['BLK%'] + d*data['STL%'] + e*data['Usg%']*( data['TS%']*2*(1-data['TOV%']) - f*data['TOV%'] - g + h*data['AST%'] + i*data['Usg%'] )
+data['ASPM'] = a*data['MP'] + b*data['TRB%'] + c*data['BLK%'] + d*data['STL%'] + e*data['Usg%']*( data['TS%']*2*(1-data['TOV%']) - f*data['TOV%'] - g + h*data['AST%'] + i*data['Usg%'] )
 
 print(data['ASPM'].sort_values(ascending=False))
