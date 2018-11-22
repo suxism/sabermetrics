@@ -36,30 +36,11 @@ for i in data.index:
 
 data.to_csv(r'C:\Users\USER\Downloads\data_raw.csv', index=False)
 
-#%% efficiency
+
+#%% Stats
 
 data = pd.read_csv(r'C:\Users\USER\Downloads\data_raw.csv')
 data['G'] = 1
-data = data.groupby('player').sum()
-
-data['Tm TS%'] = data['Tm PTS'] / (2 * (data['Tm FGA'] + 0.44 * data['Tm FTA']))
-data['TS%'] = data['PTS'] / (2 * (data['FGA'] + 0.44 * data['FTA']))
-data['AST%'] = 100 * data.AST/(((data.MP/(data['Tm MP']/5)) * data['Tm FG']) - data.FG)
-data['BLK%'] = 100 * (data.BLK * (data['Tm MP']/5))/(data.MP * (data['Opp FGA'] - data['Opp 3PA']))
-data['DRB%'] = 100 * (data.DRB * (data['Tm MP']/5)) / (data.MP * (data['Tm DRB'] + data['Opp ORB']))
-data['TRB%'] = 100 * ((data.DRB + data.ORB) * (data['Tm MP'] / 5)) / (data['MP'] * (data['Tm DRB'] + data['Tm ORB'] + data['Opp DRB'] + data['Opp ORB']))
-data['eFG%'] = (data.FG + 0.5 * data['3P'])/data.FGA
-data['FG%'] = data.FG / data.FGA
-data['FT%'] = data.FT / data.FTA
-data['GmSc'] = data.PTS + 0.4 * data.FG - 0.7 * data.FGA - 0.4*(data.FTA - data.FT) + 0.7 * data.ORB + 0.3 * data.DRB + data.STL + 0.7 * data.AST + 0.7 * data.BLK - 0.4 * data.PF - data.TOV
-data['ORB%'] = 100 * (data.ORB * (data['Tm MP']/5)) / (data.MP * (data['Tm ORB'] + data['Opp DRB']))
-data['TOV%'] = 100 * data.TOV / (data.FGA + 0.44 * data.FTA + data.TOV)
-data['Usg%'] = 100 * ((data.FGA + 0.44 * data.FTA + data.TOV) * (data['Tm MP'] / 5)) / (data.MP * (data['Tm FGA'] + 0.44 * data['Tm FTA'] + data['Tm TOV']))
-data['GmSc/G'] = data['GmSc']/data['G']
-
-#%% Possesions
-
-data = pd.read_csv(r'C:\Users\USER\Downloads\data_raw.csv')
 lg_data = data.groupby(['team','game']).first().drop(columns=['player']).sum().drop(index=['Pos','AST','STL','DRB','ORB','BLK','TOV','PF','FGA','FG','3PA','3P','FTA','FT','Min_1ST','Min_2nd','MP','PTS'])
 
 data['Tm Poss'] = (- 1.07 * (data['Tm ORB']/(data['Tm ORB'] + data['Opp DRB'])) * (data['Tm FGA'] - data['Tm FG']) + data['Tm TOV']).replace(np.nan,0)
@@ -79,6 +60,21 @@ data['Pace'] = 40 * ((data['Tm Poss'] + data['Opp Poss']) / (2 * (data['Tm MP'] 
 #data['Poss adj'] = lg_Pace / data['Pace']
 data['Poss adj'] = 0.5 + 0.5*(lg_Pace / data['Pace'])
 #data['Poss adj'] = 1
+
+data['Tm TS%'] = data['Tm PTS'] / (2 * (data['Tm FGA'] + 0.44 * data['Tm FTA']))
+data['TS%'] = data['PTS'] / (2 * (data['FGA'] + 0.44 * data['FTA']))
+data['AST%'] = 100 * data.AST/(((data.MP/(data['Tm MP']/5)) * data['Tm FG']) - data.FG)
+data['BLK%'] = 100 * (data.BLK * (data['Tm MP']/5))/(data.MP * (data['Opp FGA'] - data['Opp 3PA']))
+data['DRB%'] = 100 * (data.DRB * (data['Tm MP']/5)) / (data.MP * (data['Tm DRB'] + data['Opp ORB']))
+data['TRB%'] = 100 * ((data.DRB + data.ORB) * (data['Tm MP'] / 5)) / (data['MP'] * (data['Tm DRB'] + data['Tm ORB'] + data['Opp DRB'] + data['Opp ORB']))
+data['eFG%'] = (data.FG + 0.5 * data['3P'])/data.FGA
+data['FG%'] = data.FG / data.FGA
+data['FT%'] = data.FT / data.FTA
+data['GmSc'] = data.PTS + 0.4 * data.FG - 0.7 * data.FGA - 0.4*(data.FTA - data.FT) + 0.7 * data.ORB + 0.3 * data.DRB + data.STL + 0.7 * data.AST + 0.7 * data.BLK - 0.4 * data.PF - data.TOV
+data['ORB%'] = 100 * (data.ORB * (data['Tm MP']/5)) / (data.MP * (data['Tm ORB'] + data['Opp DRB']))
+data['TOV%'] = 100 * data.TOV / (data.FGA + 0.44 * data.FTA + data.TOV)
+data['Usg%'] = 100 * ((data.FGA + 0.44 * data.FTA + data.TOV) * (data['Tm MP'] / 5)) / (data.MP * (data['Tm FGA'] + 0.44 * data['Tm FTA'] + data['Tm TOV']))
+data['GmSc/G'] = data['GmSc']/data['G']
 data['STL%'] = 100 * (data['STL'] * (data['Tm MP'] / 5)) / (data['MP'] * data['Opp Poss'])
 
 #%% PER
@@ -103,10 +99,6 @@ print(data[data.MP>10]['PER'].sort_values(ascending=False))
 
 #%% BPM
 
-data = pd.read_csv(r'C:\Users\USER\Downloads\data_raw.csv')
-data['G'] = 1
-data = data.groupby('player').sum()
-
 a = 0.123391
 b = 0.119597
 c = -0.151287
@@ -121,11 +113,11 @@ k = 0.213485
 l = 0.725930
 
 data['MPG'] = data['MP']/data['G']
-data['ReMPG'] = data['MP']/(5)
+#data['ReMPG'] = data['MP']/(data['G']+4)
 data['3PAr'] = data['3PA']/data['FGA']
 Lg3PAr = data['3PA'].sum()/data['FGA'].sum()
 
-data['Raw BPM'] = a*data['ReMPG'] + b*data['ORB%'] + c*data['DRB%'] + d*data['STL%'] + e*data['BLK%'] + f*data['AST%'] - g*data['Usg%']*data['TOV%'] + \
+data['Raw BPM'] = a*data['MPG'] + b*data['ORB%'] + c*data['DRB%'] + d*data['STL%'] + e*data['BLK%'] + f*data['AST%'] - g*data['Usg%']*data['TOV%'] + \
 h*data['Usg%']*(1-data['TOV%'])*(2*(data['TS%'] - data['Tm TS%']) + i*data['AST%'] + j*(data['3PAr'] - Lg3PAr) - k) + l*np.sqrt(data['AST%']*data['TRB%'])
 
 print(data['Raw BPM'].sort_values(ascending=False))
@@ -142,6 +134,10 @@ g = 1.47832
 h = 0.00794
 i = 0.01160
 
-data['ASPM'] = a*data['MP'] + b*data['TRB%'] + c*data['BLK%'] + d*data['STL%'] + e*data['Usg%']*( data['TS%']*2*(1-data['TOV%']) - f*data['TOV%'] - g + h*data['AST%'] + i*data['Usg%'] )
+data['ASPM'] = a*data['MPG'] + b*data['TRB%'] + c*data['BLK%'] + d*data['STL%'] + e*data['Usg%']*( data['TS%']*2*(1-data['TOV%']) - f*data['TOV%'] - g + h*data['AST%'] + i*data['Usg%'] )
 
 print(data['ASPM'].sort_values(ascending=False))
+
+#%% output
+
+data.to_csv(r'C:\Users\USER\Downloads\data_output.csv')
