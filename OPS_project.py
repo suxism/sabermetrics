@@ -34,7 +34,7 @@ proj['wOPS'] = (5 * proj['PA_1'] * proj['OPS_1'] + 3 * proj['PA_2'] * proj['OPS_
 proj['wOPS'] = proj['wOPS'].fillna(0.8)
 
 # regression to the mean
-proj['r'] = proj['wPA']/(proj['wPA'] + 200)
+proj['r'] = proj['wPA']/(proj['wPA'] + 1000)
 proj['rOPS'] = proj['wOPS'] * proj['r'] + 0.8 * (1 - proj['r'])
 
 # aging effect
